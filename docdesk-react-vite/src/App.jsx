@@ -7,21 +7,59 @@ import PatientProfilePage from './pages/PatientProfilePage';
 import AddPatientPage from './pages/AddPatientPage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import SettingsPage from './pages/SettingsPage';
-
+import ProtectedRoute from './components/ProtectedRoute';
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/dashboard" element={<DashboardPage />} />
-        <Route path="/patients" element={<PatientsPage />} />
-        <Route path="/patients/:id" element={<PatientProfilePage />} />
-        <Route path="/patients/add" element={<AddPatientPage />} />
-        <Route path="/appointments" element={<AppointmentsPage />} />
-        <Route path="/settings" element={<SettingsPage />} />
-        {/* Catch-all redirect */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+       <Route
+  path="/dashboard"
+  element={
+    <ProtectedRoute>
+      <DashboardPage />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/patients"
+  element={
+    <ProtectedRoute>
+      <PatientsPage />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/patients/:id"
+  element={
+    <ProtectedRoute>
+      <PatientProfilePage />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/patients/add"
+  element={
+    <ProtectedRoute>
+      <AddPatientPage />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/appointments"
+  element={
+    <ProtectedRoute>
+      <AppointmentsPage />
+    </ProtectedRoute>
+  }
+/>
+<Route
+  path="/settings"
+  element={
+    <ProtectedRoute>
+      <SettingsPage />
+    </ProtectedRoute>
+  }
+/>
       </Routes>
     </BrowserRouter>
   );

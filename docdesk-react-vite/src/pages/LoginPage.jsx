@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 
@@ -8,6 +8,14 @@ export default function LoginPage() {
   const [form, setForm] = useState({ email: '', password: '' });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
+  const [apiError, setApiError] = useState('');
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
+    if (apiError) setApiError('');
+  }
 
   function validate() {
     const errs = {};
@@ -17,25 +25,43 @@ export default function LoginPage() {
     return errs;
   }
 
-  function handleChange(e) {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
-  }
-
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+    
     const errs = validate();
     if (Object.keys(errs).length) {
       setErrors(errs);
       return;
     }
+
     setLoading(true);
-    // Simulate async login
-    setTimeout(() => {
-      setLoading(false);
+    setApiError('');
+
+    try {
+      const res = await fetch('http://localhost:5000/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email, password: form.password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setApiError(data.error || 'Login failed');
+        setLoading(false);
+        return;
+      }
+
+      // ✅ Success! Token save kar
+      localStorage.setItem('authToken', data.token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+
+      // ✅ Dashboard ko navigate kar
       navigate('/dashboard');
-    }, 800);
+    } catch (error) {
+      setApiError(error.message || 'Server connection failed');
+      setLoading(false);
+    }
   }
 
   return (
@@ -53,6 +79,13 @@ export default function LoginPage() {
             </p>
           </div>
 
+          {/* API Error */}
+          {apiError && (
+            <div className="bg-error-container border border-error rounded-lg p-md mb-lg">
+              <p className="text-body-sm text-on-error-container">{apiError}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} noValidate className="space-y-gutter">
             <Input
               label="Email"
@@ -64,6 +97,7 @@ export default function LoginPage() {
               onChange={handleChange}
               error={errors.email}
               autoComplete="email"
+              disabled={loading}
             />
 
             <div className="flex flex-col gap-sm">
@@ -82,11 +116,12 @@ export default function LoginPage() {
                 placeholder="••••••••"
                 value={form.password}
                 onChange={handleChange}
+                disabled={loading}
                 autoComplete="current-password"
                 className={`w-full bg-surface-container-lowest border rounded-DEFAULT px-md py-[10px]
                   text-body-md text-on-surface placeholder:text-outline
                   focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-fixed-dim
-                  transition-all duration-200
+                  transition-all duration-200 disabled:opacity-50
                   ${errors.password ? 'border-error' : 'border-outline-variant'}`}
               />
               {errors.password && (
@@ -108,10 +143,22 @@ export default function LoginPage() {
 
           <p className="text-center text-body-sm text-on-surface-variant mt-lg">
             New to DocDesk?{' '}
-            <Link to="/" className="text-primary hover:underline">
+            <a href="/" className="text-primary hover:underline">
               Learn more
-            </Link>
+            </a>
           </p>
+
+          {/* Test Credentials */}
+          <div className="mt-lg pt-lg border-t border-outline-variant">
+            <p className="text-label-sm text-on-surface-variant mb-md">
+              ℹ️ Test Credentials:
+            </p>
+            <code className="text-body-sm text-primary bg-surface-container rounded p-sm block">
+              Email: doctor@clinic.com
+              <br />
+              Password: password123
+            </code>
+          </div>
         </div>
       </main>
     </div>
