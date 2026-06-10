@@ -140,7 +140,9 @@ export default function PatientProfilePage() {
             >
               {deleting ? 'Deleting…' : 'Delete'}
             </Button>
-            <Button variant="secondary" size="sm">Edit Profile</Button>
+           <Link to={`/patients/${id}/edit`}>
+  <Button variant="secondary" size="sm">Edit Profile</Button>
+</Link>
             <Button variant="primary" size="sm">Start Consultation</Button>
           </div>
         </div>

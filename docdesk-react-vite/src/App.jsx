@@ -8,6 +8,8 @@ import PatientProfilePage from './pages/PatientProfilePage';
 import AddPatientPage from './pages/AddPatientPage';
 import AppointmentsPage from './pages/AppointmentsPage';
 import SettingsPage from './pages/SettingsPage';
+import AddAppointmentPage from './pages/AddAppointmentPage';
+import EditPatientPage from './pages/EditPatientPage';
 
 export default function App() {
   return (
@@ -51,6 +53,14 @@ export default function App() {
           }
         />
         <Route
+  path="/patients/:id/edit"
+  element={
+    <ProtectedRoute>
+      <EditPatientPage />
+    </ProtectedRoute>
+  }
+/>
+        <Route
           path="/appointments"
           element={
             <ProtectedRoute>
@@ -58,6 +68,14 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        <Route
+            path="/appointments/add"
+            element={
+              <ProtectedRoute>
+                <AddAppointmentPage />
+              </ProtectedRoute>
+  }
+/>
         <Route
           path="/settings"
           element={
