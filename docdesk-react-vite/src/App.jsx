@@ -10,6 +10,7 @@ import AppointmentsPage from './pages/AppointmentsPage';
 import SettingsPage from './pages/SettingsPage';
 import AddAppointmentPage from './pages/AddAppointmentPage';
 import EditPatientPage from './pages/EditPatientPage';
+import RegisterPage from './pages/RegisterPage';
 
 export default function App() {
   return (
@@ -18,7 +19,7 @@ export default function App() {
         {/* Public Routes */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
-
+        <Route path="/register" element={<RegisterPage />} />
         {/* Protected Routes */}
         <Route
           path="/dashboard"

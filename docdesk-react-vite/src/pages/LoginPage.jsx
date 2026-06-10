@@ -141,12 +141,13 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <p className="text-center text-body-sm text-on-surface-variant mt-lg">
-            New to DocDesk?{' '}
-            <a href="/" className="text-primary hover:underline">
-              Learn more
-            </a>
-          </p>
+          
+       <p className="text-center text-body-sm text-on-surface-variant mt-lg">
+  New to DocDesk?{' '}
+  <Link to="/register" className="text-primary hover:underline font-medium">
+    Create Account
+  </Link>
+</p>
 
           {/* Test Credentials */}
           <div className="mt-lg pt-lg border-t border-outline-variant">

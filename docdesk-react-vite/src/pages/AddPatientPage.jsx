@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import Avatar from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
+import { useToast } from '../hooks/useToast';
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState([]);
@@ -13,7 +14,7 @@ export default function PatientsPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const PER_PAGE = 10;
-
+  const { showToast, ToastContainer } = useToast();
   useEffect(() => {
     fetchPatients();
   }, [query, page]);

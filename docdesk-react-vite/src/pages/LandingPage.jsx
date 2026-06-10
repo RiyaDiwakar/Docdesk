@@ -16,12 +16,12 @@ export default function LandingPage() {
           >
             Doctor Login
           </Link>
-          <Link
-            to="/login"
-            className="text-label-md bg-primary text-on-primary px-lg py-sm rounded-full hover:bg-on-primary-fixed-variant transition-colors shadow-sm"
-          >
-            Get Started
-          </Link>
+         <Link
+            to="/register"
+         className="bg-primary text-on-primary..."
+>
+  Get Started
+  </Link>
         </nav>
       </header>
 
