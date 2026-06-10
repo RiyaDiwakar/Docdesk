@@ -1,222 +1,236 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
-import Input from '../components/ui/Input';
-import Textarea from '../components/ui/Textarea';
-import Select from '../components/ui/Select';
+import Avatar from '../components/ui/Avatar';
 import Button from '../components/ui/Button';
-import Card from '../components/ui/Card';
 
-const GENDER_OPTIONS = [
-  { value: 'female', label: 'Female' },
-  { value: 'male', label: 'Male' },
-  { value: 'non-binary', label: 'Non-binary' },
-  { value: 'prefer-not-to-say', label: 'Prefer not to say' },
-];
+export default function PatientsPage() {
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PER_PAGE = 10;
 
-const EMPTY_FORM = {
-  fullName: '',
-  age: '',
-  gender: '',
-  phone: '',
-  allergies: '',
-  problems: '',
-  history: '',
-  appointmentDate: '',
-  notes: '',
-};
+  useEffect(() => {
+    fetchPatients();
+  }, [query, page]);
 
-export default function AddPatientPage() {
-  const navigate = useNavigate();
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [errors, setErrors] = useState({});
-  const [saving, setSaving] = useState(false);
+  async function fetchPatients() {
+    setLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('authToken');
+      const params = new URLSearchParams({
+        search: query,
+        page,
+        limit: PER_PAGE,
+      });
 
-  function handleChange(e) {
-    const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: undefined }));
-  }
+      const res = await fetch(`http://localhost:5000/api/patients?${params}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
 
-  function validate() {
-    const errs = {};
-    if (!form.fullName.trim()) errs.fullName = 'Full name is required';
-    if (!form.age) errs.age = 'Age is required';
-    else if (form.age < 0 || form.age > 150) errs.age = 'Enter a valid age';
-    if (!form.gender) errs.gender = 'Please select a gender';
-    if (!form.phone.trim()) errs.phone = 'Phone number is required';
-    return errs;
-  }
+      const data = await res.json();
 
-  function handleSubmit(e) {
-    e.preventDefault();
-    const errs = validate();
-    if (Object.keys(errs).length) {
-      setErrors(errs);
-      return;
+      if (!res.ok) {
+        setError(data.error || 'Failed to fetch patients');
+        return;
+      }
+
+      setPatients(data.data);
+      setTotal(data.total);
+      setTotalPages(data.pages);
+    } catch (err) {
+      setError('Server connection failed. Check backend is running.');
+    } finally {
+      setLoading(false);
     }
-    setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
-      navigate('/patients');
-    }, 800);
+  }
+
+  function handleSearch(e) {
+    setQuery(e.target.value);
+    setPage(1);
   }
 
   return (
     <AppLayout>
-      {/* ── Top App Bar (contextual) ── */}
-      <header className="bg-surface fixed top-16 w-full border-b border-outline-variant z-40">
-        <div className="flex justify-between items-center px-lg h-14 w-full max-w-container-max mx-auto">
-          <Link
-            to="/patients"
-            className="flex items-center gap-sm text-primary hover:bg-surface-variant/50 p-2 rounded-full transition-colors"
-          >
-            <span className="material-symbols-outlined">arrow_back</span>
-          </Link>
-          <h1 className="text-headline-md font-bold text-primary">Add Patient</h1>
-          <div className="w-10" />
-        </div>
-      </header>
+      <div className="pt-lg pb-xl max-w-container-max mx-auto px-md md:px-lg min-h-screen flex flex-col">
 
-      {/* Extra top-padding to clear the contextual sub-header */}
-      <div className="pt-14 px-md md:px-lg max-w-3xl mx-auto mb-xl">
-        <form onSubmit={handleSubmit} noValidate className="space-y-lg pt-lg">
-
-          {/* ── Personal Information ── */}
-          <FormSection icon="person" title="Personal Information">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
-              <Input
-                label="Full Name"
-                id="fullName"
-                name="fullName"
-                type="text"
-                placeholder="Jane Doe"
-                value={form.fullName}
-                onChange={handleChange}
-                error={errors.fullName}
-                className="md:col-span-2"
-              />
-              <Input
-                label="Age"
-                id="age"
-                name="age"
-                type="number"
-                placeholder="34"
-                min={0}
-                max={150}
-                value={form.age}
-                onChange={handleChange}
-                error={errors.age}
-              />
-              <Select
-                label="Gender"
-                id="gender"
-                name="gender"
-                placeholder="Select gender"
-                options={GENDER_OPTIONS}
-                value={form.gender}
-                onChange={handleChange}
-                error={errors.gender}
-              />
-              <Input
-                label="Phone Number"
-                id="phone"
-                name="phone"
-                type="tel"
-                placeholder="+1 (555) 000-0000"
-                value={form.phone}
-                onChange={handleChange}
-                error={errors.phone}
-                className="md:col-span-2"
-              />
-            </div>
-          </FormSection>
-
-          {/* ── Medical Information ── */}
-          <FormSection icon="medical_information" title="Medical Information">
-            <div className="flex flex-col gap-gutter">
-              <Textarea
-                label="Allergies"
-                id="allergies"
-                name="allergies"
-                placeholder="List any known allergies…"
-                rows={2}
-                value={form.allergies}
-                onChange={handleChange}
-              />
-              <Textarea
-                label="Current Problems"
-                id="problems"
-                name="problems"
-                placeholder="Describe current symptoms or reasons for visit…"
-                rows={3}
-                value={form.problems}
-                onChange={handleChange}
-              />
-              <Textarea
-                label="Medical History"
-                id="history"
-                name="history"
-                placeholder="Relevant past medical history…"
-                rows={3}
-                value={form.history}
-                onChange={handleChange}
-              />
-            </div>
-          </FormSection>
-
-          {/* ── Appointment Information ── */}
-          <FormSection icon="calendar_today" title="Appointment Information">
-            <div className="flex flex-col gap-gutter">
-              <Input
-                label="Next Appointment Date"
-                id="appointmentDate"
-                name="appointmentDate"
-                type="datetime-local"
-                value={form.appointmentDate}
-                onChange={handleChange}
-                className="md:w-1/2"
-              />
-              <Textarea
-                label="Notes"
-                id="notes"
-                name="notes"
-                placeholder="Additional administrative or scheduling notes…"
-                rows={2}
-                value={form.notes}
-                onChange={handleChange}
-              />
-            </div>
-          </FormSection>
-
-          {/* ── Actions ── */}
-          <div className="flex justify-end pt-md pb-xl gap-sm">
-            <Link to="/patients">
-              <Button variant="secondary" type="button">Cancel</Button>
-            </Link>
-            <Button
-              type="submit"
-              variant="primary"
-              icon="save"
-              disabled={saving}
-            >
-              {saving ? 'Saving…' : 'Save Patient'}
-            </Button>
+        {/* ── Page Header ── */}
+        <section className="flex flex-col md:flex-row md:items-end justify-between gap-md mb-lg">
+          <div>
+            <h1 className="text-display text-on-surface mb-xs">Patients</h1>
+            <p className="text-body-md text-on-surface-variant">
+              {total} patients in your directory.
+            </p>
           </div>
-        </form>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-md w-full md:w-auto">
+            {/* Search */}
+            <div className="relative flex-grow sm:min-w-[300px]">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-outline text-[20px]">
+                search
+              </span>
+              <input
+                type="text"
+                placeholder="Search by name or phone…"
+                value={query}
+                onChange={handleSearch}
+                className="w-full bg-surface-container-lowest border border-outline-variant rounded-lg pl-[40px] pr-md py-[10px] text-body-md text-on-surface placeholder:text-outline focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary-fixed-dim transition-all shadow-sm"
+              />
+            </div>
+            <Link to="/patients/add">
+              <Button variant="primary" icon="add" className="whitespace-nowrap w-full sm:w-auto">
+                Add Patient
+              </Button>
+            </Link>
+          </div>
+        </section>
+
+        {/* ── Error ── */}
+        {error && (
+          <div className="bg-error-container border border-error/30 rounded-lg p-md mb-lg">
+            <p className="text-body-sm text-on-error-container flex items-center gap-sm">
+              <span className="material-symbols-outlined text-[18px]">error</span>
+              {error}
+            </p>
+          </div>
+        )}
+
+        {/* ── Loading ── */}
+        {loading && (
+          <div className="flex items-center justify-center py-xl">
+            <div className="flex flex-col items-center gap-md">
+              <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+              <p className="text-body-md text-on-surface-variant">Loading patients…</p>
+            </div>
+          </div>
+        )}
+
+        {/* ── Table ── */}
+        {!loading && (
+          <section className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex-grow shadow-sm">
+
+            {/* Desktop Header */}
+            <div className="hidden sm:grid grid-cols-12 gap-md px-lg py-sm bg-surface-container-low border-b border-outline-variant text-label-sm text-on-surface-variant uppercase tracking-wider">
+              <div className="col-span-4">Patient</div>
+              <div className="col-span-3">Phone</div>
+              <div className="col-span-2">Gender</div>
+              <div className="col-span-3 text-right">Action</div>
+            </div>
+
+            {/* Rows */}
+            <div className="flex flex-col divide-y divide-outline-variant">
+              {patients.length === 0 ? (
+                <EmptyState />
+              ) : (
+                patients.map((patient) => (
+                  <PatientRow key={patient._id} patient={patient} />
+                ))
+              )}
+            </div>
+
+            {/* Pagination */}
+            <div className="px-md sm:px-lg py-sm border-t border-outline-variant bg-surface-container-lowest flex items-center justify-between">
+              <p className="text-body-sm text-on-surface-variant">
+                Showing {patients.length} of {total} patients
+              </p>
+              <div className="flex items-center gap-xs">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="p-xs text-outline hover:text-on-surface disabled:opacity-40 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[20px]">chevron_left</span>
+                </button>
+                {Array.from({ length: totalPages }).map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setPage(i + 1)}
+                    className={`h-6 w-6 flex items-center justify-center rounded text-label-sm transition-colors ${
+                      page === i + 1
+                        ? 'bg-primary text-on-primary font-bold'
+                        : 'text-on-surface hover:bg-surface-container'
+                    }`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="p-xs text-outline hover:text-on-surface disabled:opacity-40 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+                </button>
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </AppLayout>
   );
 }
 
-function FormSection({ icon, title, children }) {
+function PatientRow({ patient }) {
   return (
-    <section className="bg-surface-container-lowest border border-surface-variant rounded-lg p-lg">
-      <div className="flex items-center gap-sm mb-md pb-sm border-b border-surface-variant">
-        <span className="material-symbols-outlined text-secondary">{icon}</span>
-        <h2 className="text-headline-md text-on-surface">{title}</h2>
+    <div className="group flex flex-col sm:grid sm:grid-cols-12 gap-y-sm sm:gap-md px-md sm:px-lg py-md sm:items-center hover:bg-surface transition-colors relative">
+      <Link to={`/patients/${patient._id}`} className="absolute inset-0 z-10 sm:hidden" />
+
+      {/* Name + Avatar */}
+      <div className="col-span-4 flex items-center gap-md">
+        <Avatar name={patient.name} size={10} />
+        <div>
+          <p className="text-body-md font-semibold text-on-surface group-hover:text-primary transition-colors">
+            {patient.name}
+          </p>
+          <p className="text-body-sm text-on-surface-variant">
+            {patient.gender} • {patient.bloodType || 'Unknown'}
+          </p>
+        </div>
       </div>
-      {children}
-    </section>
+
+      {/* Phone */}
+      <div className="col-span-3 flex items-center text-body-md text-on-surface">
+        {patient.phone}
+      </div>
+
+      {/* Gender */}
+      <div className="col-span-2 flex items-center text-body-md text-on-surface">
+        {patient.gender}
+      </div>
+
+      {/* Action */}
+      <div className="col-span-3 flex items-center justify-end z-20">
+        <Link
+          to={`/patients/${patient._id}`}
+          className="hidden sm:inline-flex text-label-md text-primary hover:text-primary-container items-center gap-xs transition-colors"
+        >
+          View Profile
+          <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center py-xl px-md text-center">
+      <div className="h-16 w-16 bg-surface-container rounded-full flex items-center justify-center mb-md">
+        <span className="material-symbols-outlined text-outline text-[32px]">group_off</span>
+      </div>
+      <h3 className="text-headline-md text-on-surface mb-xs">No patients found</h3>
+      <p className="text-body-md text-on-surface-variant max-w-[300px] mb-lg">
+        Add your first patient to get started!
+      </p>
+      <Link to="/patients/add">
+        <Button variant="primary" icon="add">Add Patient</Button>
+      </Link>
+    </div>
   );
 }

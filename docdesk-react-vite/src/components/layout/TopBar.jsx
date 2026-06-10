@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 const NAV_LINKS = [
   { to: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -9,6 +9,13 @@ const NAV_LINKS = [
 
 export default function TopBar() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+
+  function handleLogout() {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('user');
+    navigate('/login');
+  }
 
   return (
     <header className="glass-header fixed top-0 w-full z-50 border-b border-outline-variant">
@@ -42,11 +49,27 @@ export default function TopBar() {
           })}
         </nav>
 
-        {/* Avatar */}
+        {/* Right Side: Avatar + Logout */}
         <div className="flex items-center gap-sm">
+          {/* Doctor Name (Desktop only) */}
+          <span className="hidden md:block text-label-md text-on-surface-variant">
+            {JSON.parse(localStorage.getItem('user') || '{}')?.name || 'Doctor'}
+          </span>
+
+          {/* Avatar */}
           <div className="w-8 h-8 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center text-label-md font-bold cursor-pointer hover:opacity-80 transition-opacity">
-            DR
+            {JSON.parse(localStorage.getItem('user') || '{}')?.name?.split(' ').map(w => w[0]).join('').slice(0,2) || 'DR'}
           </div>
+
+          {/* Logout Button */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-xs text-secondary hover:text-error transition-colors px-sm py-sm rounded-lg hover:bg-error-container group"
+            title="Logout"
+          >
+            <span className="material-symbols-outlined text-[20px] group-hover:text-error">logout</span>
+            <span className="text-label-md hidden md:block">Logout</span>
+          </button>
         </div>
       </div>
     </header>

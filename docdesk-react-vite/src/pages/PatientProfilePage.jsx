@@ -1,9 +1,9 @@
+import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
-import { PATIENTS } from '../data/mockData';
 
 const STATUS_VARIANT = {
   Chronic: 'warning',
@@ -15,15 +15,93 @@ const STATUS_VARIANT = {
 export default function PatientProfilePage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [patient, setPatient] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
-  const patient = PATIENTS.find((p) => p.id === id);
+  useEffect(() => {
+    fetchPatient();
+  }, [id]);
 
-  if (!patient) {
+  async function fetchPatient() {
+    setLoading(true);
+    setError('');
+    try {
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(`http://localhost:5000/api/patients/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Patient not found');
+        return;
+      }
+      setPatient(data);
+    } catch (err) {
+      setError('Server connection failed.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleDelete() {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete ${patient.name}? This cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeleting(true);
+    try {
+      const token = localStorage.getItem('authToken');
+      const res = await fetch(`http://localhost:5000/api/patients/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        alert(data.error || 'Failed to delete patient');
+        setDeleting(false);
+        return;
+      }
+
+      navigate('/patients');
+    } catch (err) {
+      alert('Server connection failed.');
+      setDeleting(false);
+    }
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return 'N/A';
+    return new Date(dateStr).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="flex flex-col items-center gap-md">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+            <p className="text-body-md text-on-surface-variant">Loading patient...</p>
+          </div>
+        </div>
+      </AppLayout>
+    );
+  }
+
+  if (error || !patient) {
     return (
       <AppLayout>
         <div className="flex flex-col items-center justify-center min-h-[60vh] gap-md">
           <span className="material-symbols-outlined text-[64px] text-outline">person_off</span>
           <h2 className="text-headline-lg text-on-surface">Patient not found</h2>
+          <p className="text-body-md text-on-surface-variant">{error}</p>
           <Button variant="secondary" onClick={() => navigate('/patients')}>
             Back to Patients
           </Button>
@@ -31,6 +109,13 @@ export default function PatientProfilePage() {
       </AppLayout>
     );
   }
+
+  const initials = patient.name
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <AppLayout>
@@ -46,6 +131,15 @@ export default function PatientProfilePage() {
             <span className="text-label-md">Back to Patients</span>
           </Link>
           <div className="flex gap-sm">
+            <Button
+              variant="danger"
+              size="sm"
+              icon="delete"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? 'Deleting…' : 'Delete'}
+            </Button>
             <Button variant="secondary" size="sm">Edit Profile</Button>
             <Button variant="primary" size="sm">Start Consultation</Button>
           </div>
@@ -61,29 +155,21 @@ export default function PatientProfilePage() {
             <Card className="p-lg flex flex-col gap-md">
               <div className="flex items-start gap-md">
                 <div className="w-16 h-16 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed text-headline-lg font-bold flex-shrink-0">
-                  {patient.name.split(' ').map((w) => w[0]).join('').slice(0, 2)}
+                  {initials}
                 </div>
                 <div className="flex flex-col">
                   <h1 className="text-headline-md text-on-surface">{patient.name}</h1>
-                  <div className="flex items-center gap-sm mt-xs flex-wrap">
-                    <span className="text-label-sm px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant">
-                      ID: {patient.id}
-                    </span>
-                    {patient.tag && (
-                      <>
-                        <span className="w-1 h-1 rounded-full bg-outline-variant" />
-                        <Badge variant="warning">{patient.tag}</Badge>
-                      </>
-                    )}
-                  </div>
+                  <span className="text-label-sm px-2 py-0.5 rounded-full bg-surface-container-high text-on-surface-variant mt-xs w-fit">
+                    {patient.gender}
+                  </span>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-sm mt-sm">
                 {[
-                  { label: 'Age', value: `${patient.age} yrs (DOB: ${patient.dob})` },
-                  { label: 'Gender', value: patient.gender },
-                  { label: 'Blood Type', value: patient.bloodType },
+                  { label: 'Date of Birth', value: formatDate(patient.dateOfBirth) },
+                  { label: 'Blood Type', value: patient.bloodType || 'Unknown' },
                   { label: 'Phone', value: patient.phone },
+                  { label: 'Email', value: patient.email || 'N/A' },
                 ].map(({ label, value }) => (
                   <div key={label} className="flex flex-col">
                     <span className="text-label-sm text-secondary uppercase tracking-wider">{label}</span>
@@ -101,7 +187,7 @@ export default function PatientProfilePage() {
                   Allergies
                 </h2>
               </div>
-              {patient.allergies.length === 0 ? (
+              {!patient.allergies || patient.allergies.length === 0 ? (
                 <p className="text-body-sm text-outline">No known allergies</p>
               ) : (
                 <div className="flex flex-wrap gap-xs">
@@ -124,75 +210,38 @@ export default function PatientProfilePage() {
                   <span className="material-symbols-outlined text-[16px] text-secondary">monitor_heart</span>
                   Medical Problems
                 </h2>
-                <button className="text-primary hover:text-primary-container">
-                  <span className="material-symbols-outlined text-[18px]">add</span>
-                </button>
               </div>
-              <div className="flex flex-col">
-                {patient.problems.map((prob, i) => (
-                  <div
-                    key={prob.name}
-                    className={`flex justify-between items-start py-sm ${
-                      i < patient.problems.length - 1 ? 'border-b border-surface-container' : ''
-                    }`}
-                  >
-                    <div className="flex flex-col">
-                      <span className="text-body-md text-on-surface font-medium">{prob.name}</span>
-                      <span className="text-body-sm text-secondary">Diagnosed: {prob.diagnosed}</span>
+              {!patient.medicalProblems || patient.medicalProblems.length === 0 ? (
+                <p className="text-body-sm text-outline py-sm">No medical problems recorded.</p>
+              ) : (
+                <div className="flex flex-col">
+                  {patient.medicalProblems.map((prob, i) => (
+                    <div
+                      key={i}
+                      className={`flex justify-between items-start py-sm ${
+                        i < patient.medicalProblems.length - 1 ? 'border-b border-surface-container' : ''
+                      }`}
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-body-md text-on-surface font-medium">{prob.name}</span>
+                        <span className="text-body-sm text-secondary">
+                          Diagnosed: {formatDate(prob.diagnosed)}
+                        </span>
+                      </div>
+                      <Badge variant={STATUS_VARIANT[prob.status] || 'neutral'}>
+                        {prob.status}
+                      </Badge>
                     </div>
-                    <Badge variant={STATUS_VARIANT[prob.status] || 'neutral'}>{prob.status}</Badge>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </Card>
           </div>
 
           {/* ── Right Column ── */}
           <div className="lg:col-span-8 flex flex-col gap-gutter">
-
-            {/* Upcoming Appointment Banner */}
-            {patient.nextAppointment && (
-              <div className="bg-primary-fixed/30 border border-primary-fixed-dim rounded-xl p-md flex flex-col md:flex-row items-start md:items-center justify-between gap-md relative overflow-hidden">
-                <div className="absolute -right-4 -top-4 text-primary-fixed opacity-30 pointer-events-none">
-                  <span className="material-symbols-outlined" style={{ fontSize: 120 }}>event</span>
-                </div>
-                <div className="flex items-center gap-md relative z-10">
-                  <div className="w-12 h-12 rounded-lg bg-surface-container-lowest border border-outline-variant flex flex-col items-center justify-center flex-shrink-0">
-                    <span className="text-label-sm text-secondary uppercase leading-none mb-1">
-                      {patient.nextAppointment.month}
-                    </span>
-                    <span className="text-headline-md text-primary leading-none">
-                      {patient.nextAppointment.day}
-                    </span>
-                  </div>
-                  <div className="flex flex-col">
-                    <span className="text-label-sm text-primary uppercase tracking-wider mb-xs">
-                      Upcoming Appointment
-                    </span>
-                    <span className="text-headline-md text-on-surface">
-                      {patient.nextAppointment.title}
-                    </span>
-                    <div className="flex items-center gap-sm mt-xs text-on-surface-variant flex-wrap">
-                      <span className="flex items-center gap-xs text-body-sm">
-                        <span className="material-symbols-outlined text-[16px]">schedule</span>
-                        {patient.nextAppointment.time}
-                      </span>
-                      <span className="w-1 h-1 rounded-full bg-outline-variant" />
-                      <span className="flex items-center gap-xs text-body-sm">
-                        <span className="material-symbols-outlined text-[16px]">person</span>
-                        {patient.nextAppointment.doctor}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <Button variant="secondary" size="sm" className="relative z-10 w-full md:w-auto">
-                  Reschedule
-                </Button>
-              </div>
-            )}
-
-            {/* Prescriptions + Notes Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
+
               {/* Prescriptions */}
               <Card className="flex flex-col h-full">
                 <div className="p-md border-b border-surface-container-high flex justify-between items-center bg-surface/50 rounded-t-xl">
@@ -200,29 +249,21 @@ export default function PatientProfilePage() {
                     <span className="material-symbols-outlined text-[16px] text-primary">prescriptions</span>
                     Prescriptions
                   </h2>
-                  <button className="text-primary text-label-sm hover:underline">View All</button>
                 </div>
                 <div className="flex flex-col p-md gap-sm">
-                  {patient.prescriptions.map((rx, i) => (
-                    <div
-                      key={rx.id}
-                      className={`flex flex-col pb-sm ${
-                        i < patient.prescriptions.length - 1 ? 'border-b border-surface-container' : ''
-                      }`}
-                    >
-                      <div className="flex justify-between items-start">
-                        <span className="text-body-md text-on-surface font-medium">{rx.name}</span>
-                        <Badge variant={rx.status === 'Active' ? 'primary' : 'neutral'}>
-                          {rx.status}
-                        </Badge>
+                  {!patient.prescriptions || patient.prescriptions.length === 0 ? (
+                    <p className="text-body-sm text-outline">No prescriptions.</p>
+                  ) : (
+                    patient.prescriptions.map((rx, i) => (
+                      <div key={i} className={`flex flex-col pb-sm ${i < patient.prescriptions.length - 1 ? 'border-b border-surface-container' : ''}`}>
+                        <div className="flex justify-between items-start">
+                          <span className="text-body-md text-on-surface font-medium">{rx.name}</span>
+                          <Badge variant={rx.status === 'Active' ? 'primary' : 'neutral'}>{rx.status}</Badge>
+                        </div>
+                        <span className="text-body-sm text-secondary mt-1">{rx.dosage}</span>
                       </div>
-                      <span className="text-body-sm text-secondary mt-1">{rx.dosage}</span>
-                      <div className="flex items-center gap-sm mt-2">
-                        <span className="text-label-sm text-outline">Refills: {rx.refills}</span>
-                        <span className="text-label-sm text-outline">Last filled: {rx.lastFilled}</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </Card>
 
@@ -230,28 +271,24 @@ export default function PatientProfilePage() {
               <Card className="flex flex-col h-full">
                 <div className="p-md border-b border-surface-container-high flex justify-between items-center bg-surface/50 rounded-t-xl">
                   <h2 className="text-label-md text-on-surface uppercase tracking-wider flex items-center gap-xs">
-                    <span className="material-symbols-outlined text-[16px] text-tertiary-container">subject</span>
-                    Recent Notes
+                    <span className="material-symbols-outlined text-[16px] text-secondary">subject</span>
+                    Clinical Notes
                   </h2>
-                  <button className="text-primary text-label-sm hover:underline">New Note</button>
                 </div>
-                <div className="flex flex-col p-md gap-md relative">
-                  {/* Timeline line */}
-                  <div className="absolute left-[27px] top-md bottom-md w-px bg-surface-container-high z-0" />
-                  {patient.notes.map((note) => (
-                    <div key={note.id} className="flex gap-md relative z-10">
-                      <div className="w-6 h-6 rounded-full bg-surface-container border-2 border-surface-container-lowest flex items-center justify-center flex-shrink-0 mt-1">
-                        <div className="w-2 h-2 rounded-full bg-outline" />
-                      </div>
-                      <div className="flex flex-col bg-surface hover:bg-surface-container-low transition-colors rounded p-sm border border-outline-variant/30 cursor-pointer w-full">
+                <div className="flex flex-col p-md gap-md">
+                  {!patient.notes || patient.notes.length === 0 ? (
+                    <p className="text-body-sm text-outline">No notes yet.</p>
+                  ) : (
+                    patient.notes.map((note, i) => (
+                      <div key={i} className="flex flex-col bg-surface hover:bg-surface-container-low transition-colors rounded p-sm border border-outline-variant/30 cursor-pointer">
                         <div className="flex justify-between items-center mb-1">
                           <span className="text-label-md text-on-surface">{note.title}</span>
-                          <span className="text-label-sm text-secondary">{note.date}</span>
+                          <span className="text-label-sm text-secondary">{formatDate(note.createdAt)}</span>
                         </div>
                         <p className="text-body-sm text-on-surface-variant line-clamp-2">{note.body}</p>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </Card>
             </div>
