@@ -5,6 +5,7 @@ import Input from '../components/ui/Input';
 import Textarea from '../components/ui/Textarea';
 import Select from '../components/ui/Select';
 import Button from '../components/ui/Button';
+import { useToast } from '../hooks/useToast';
 
 const GENDER_OPTIONS = [
   { value: 'Female', label: 'Female' },
@@ -40,8 +41,8 @@ export default function EditPatientPage() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [apiError, setApiError] = useState('');
+  const { showToast, ToastContainer } = useToast();
 
-  // ── Fetch existing patient data ──
   useEffect(() => {
     async function fetchPatient() {
       try {
@@ -54,12 +55,9 @@ export default function EditPatientPage() {
           setApiError(data.error || 'Patient not found');
           return;
         }
-
-        // Format date for input field
         const dob = data.dateOfBirth
           ? new Date(data.dateOfBirth).toISOString().split('T')[0]
           : '';
-
         setForm({
           name: data.name || '',
           phone: data.phone || '',
@@ -96,16 +94,13 @@ export default function EditPatientPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-
     const errs = validate();
     if (Object.keys(errs).length) {
       setErrors(errs);
       return;
     }
-
     setSaving(true);
     setApiError('');
-
     try {
       const token = localStorage.getItem('authToken');
       const res = await fetch(`http://localhost:5000/api/patients/${id}`, {
@@ -126,24 +121,22 @@ export default function EditPatientPage() {
             : [],
         }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         setApiError(data.error || 'Failed to update patient');
+        showToast(data.error || 'Failed to update patient', 'error');
         setSaving(false);
         return;
       }
-
-      // ✅ Success! Patient profile mein redirect
-      navigate(`/patients/${id}`);
+      showToast('Patient updated successfully!', 'success');
+      setTimeout(() => navigate(`/patients/${id}`), 1000);
     } catch (err) {
       setApiError('Server connection failed.');
+      showToast('Server connection failed.', 'error');
       setSaving(false);
     }
   }
 
-  // ── Loading State ──
   if (loading) {
     return (
       <AppLayout>
@@ -159,7 +152,6 @@ export default function EditPatientPage() {
 
   return (
     <AppLayout>
-      {/* ── Contextual Header ── */}
       <header className="bg-surface fixed top-16 w-full border-b border-outline-variant z-40">
         <div className="flex justify-between items-center px-lg h-14 w-full max-w-container-max mx-auto">
           <Link
@@ -176,7 +168,6 @@ export default function EditPatientPage() {
       <div className="pt-14 px-md md:px-lg max-w-3xl mx-auto mb-xl">
         <form onSubmit={handleSubmit} noValidate className="space-y-lg pt-lg">
 
-          {/* API Error */}
           {apiError && (
             <div className="bg-error-container border border-error/30 rounded-lg p-md">
               <p className="text-body-sm text-on-error-container flex items-center gap-sm">
@@ -186,7 +177,6 @@ export default function EditPatientPage() {
             </div>
           )}
 
-          {/* ── Personal Information ── */}
           <FormSection icon="person" title="Personal Information">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
               <Input
@@ -257,7 +247,6 @@ export default function EditPatientPage() {
             </div>
           </FormSection>
 
-          {/* ── Medical Information ── */}
           <FormSection icon="medical_information" title="Medical Information">
             <Textarea
               label="Allergies"
@@ -272,7 +261,6 @@ export default function EditPatientPage() {
             />
           </FormSection>
 
-          {/* ── Actions ── */}
           <div className="flex justify-end pt-md pb-xl gap-sm">
             <Link to={`/patients/${id}`}>
               <Button variant="secondary" type="button" disabled={saving}>
@@ -291,6 +279,8 @@ export default function EditPatientPage() {
 
         </form>
       </div>
+
+      <ToastContainer />
     </AppLayout>
   );
 }

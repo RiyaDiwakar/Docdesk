@@ -5,6 +5,7 @@ import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Textarea from '../components/ui/Textarea';
 import Button from '../components/ui/Button';
+import { useToast } from '../hooks/useToast';
 
 const TYPE_OPTIONS = [
   { value: 'Consultation', label: 'Consultation' },
@@ -30,6 +31,7 @@ export default function AddAppointmentPage() {
   const [errors, setErrors] = useState({});
   const [saving, setSaving] = useState(false);
   const [apiError, setApiError] = useState('');
+  const { showToast, ToastContainer } = useToast();
 
   useEffect(() => {
     async function fetchPatients() {
@@ -68,16 +70,13 @@ export default function AddAppointmentPage() {
 
   async function handleSubmit(e) {
     e.preventDefault();
-
     const errs = validate();
     if (Object.keys(errs).length) {
       setErrors(errs);
       return;
     }
-
     setSaving(true);
     setApiError('');
-
     try {
       const token = localStorage.getItem('authToken');
       const res = await fetch('http://localhost:5000/api/appointments', {
@@ -96,18 +95,18 @@ export default function AddAppointmentPage() {
           isVirtual: form.isVirtual,
         }),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         setApiError(data.error || 'Failed to add appointment');
+        showToast(data.error || 'Failed to add appointment', 'error');
         setSaving(false);
         return;
       }
-
-      navigate('/appointments');
+      showToast('Appointment scheduled successfully!', 'success');
+      setTimeout(() => navigate('/appointments'), 1000);
     } catch (err) {
-      setApiError('Server connection failed. Check backend is running.');
+      setApiError('Server connection failed.');
+      showToast('Server connection failed.', 'error');
       setSaving(false);
     }
   }
@@ -119,7 +118,6 @@ export default function AddAppointmentPage() {
 
   return (
     <AppLayout>
-      {/* ── Contextual Header ── */}
       <header className="bg-surface fixed top-16 w-full border-b border-outline-variant z-40">
         <div className="flex justify-between items-center px-lg h-14 w-full max-w-container-max mx-auto">
           <Link
@@ -136,7 +134,6 @@ export default function AddAppointmentPage() {
       <div className="pt-14 px-md md:px-lg max-w-3xl mx-auto mb-xl">
         <form onSubmit={handleSubmit} noValidate className="space-y-lg pt-lg">
 
-          {/* API Error */}
           {apiError && (
             <div className="bg-error-container border border-error/30 rounded-lg p-md">
               <p className="text-body-sm text-on-error-container flex items-center gap-sm">
@@ -146,10 +143,8 @@ export default function AddAppointmentPage() {
             </div>
           )}
 
-          {/* ── Patient & Schedule ── */}
           <FormSection icon="person" title="Patient & Schedule">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-gutter">
-
               <Select
                 label="Select Patient *"
                 id="patientId"
@@ -162,7 +157,6 @@ export default function AddAppointmentPage() {
                 className="md:col-span-2"
                 disabled={saving}
               />
-
               <Input
                 label="Date *"
                 id="date"
@@ -173,7 +167,6 @@ export default function AddAppointmentPage() {
                 error={errors.date}
                 disabled={saving}
               />
-
               <Input
                 label="Time *"
                 id="time"
@@ -184,7 +177,6 @@ export default function AddAppointmentPage() {
                 error={errors.time}
                 disabled={saving}
               />
-
               <Select
                 label="Appointment Type *"
                 id="type"
@@ -195,7 +187,6 @@ export default function AddAppointmentPage() {
                 error={errors.type}
                 disabled={saving}
               />
-
               <Input
                 label="Location"
                 id="location"
@@ -209,7 +200,6 @@ export default function AddAppointmentPage() {
             </div>
           </FormSection>
 
-          {/* ── Additional Info ── */}
           <FormSection icon="notes" title="Additional Info">
             <div className="flex flex-col gap-gutter">
               <Textarea
@@ -222,8 +212,6 @@ export default function AddAppointmentPage() {
                 onChange={handleChange}
                 disabled={saving}
               />
-
-              {/* Virtual Toggle */}
               <div className="flex items-center gap-md p-md bg-surface-container rounded-lg border border-outline-variant">
                 <div className="flex flex-col flex-1">
                   <span className="text-body-md text-on-surface font-medium">
@@ -248,7 +236,6 @@ export default function AddAppointmentPage() {
             </div>
           </FormSection>
 
-          {/* ── Actions ── */}
           <div className="flex justify-end pt-md pb-xl gap-sm">
             <Link to="/appointments">
               <Button variant="secondary" type="button" disabled={saving}>
@@ -267,6 +254,8 @@ export default function AddAppointmentPage() {
 
         </form>
       </div>
+
+      <ToastContainer />
     </AppLayout>
   );
 }

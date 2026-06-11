@@ -5,12 +5,14 @@ import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Avatar from '../components/ui/Avatar';
 import Card from '../components/ui/Card';
+import { useToast } from '../hooks/useToast';
 
 export default function AppointmentsPage() {
   const [activeTab, setActiveTab] = useState('upcoming');
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { showToast, ToastContainer } = useToast();
 
   useEffect(() => {
     fetchAppointments();
@@ -53,9 +55,12 @@ export default function AppointmentsPage() {
           body: JSON.stringify({ status }),
         }
       );
-      if (res.ok) fetchAppointments();
+      if (res.ok) {
+        showToast('Appointment marked as complete!', 'success');
+        fetchAppointments();
+      }
     } catch (err) {
-      alert('Failed to update appointment.');
+      showToast('Failed to update appointment.', 'error');
     }
   }
 
@@ -68,9 +73,12 @@ export default function AppointmentsPage() {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      if (res.ok) fetchAppointments();
+      if (res.ok) {
+        showToast('Appointment cancelled.', 'info');
+        fetchAppointments();
+      }
     } catch (err) {
-      alert('Failed to cancel appointment.');
+      showToast('Failed to cancel appointment.', 'error');
     }
   }
 
@@ -111,11 +119,7 @@ export default function AppointmentsPage() {
               Manage your daily schedule and patient encounters.
             </p>
           </div>
-
-          {/* Right Side */}
           <div className="flex items-center gap-md">
-
-            {/* Tab Toggle */}
             <div className="flex bg-surface-container-low p-xs rounded-lg border border-outline-variant/50">
               {['upcoming', 'completed'].map((tab) => (
                 <button
@@ -131,14 +135,11 @@ export default function AppointmentsPage() {
                 </button>
               ))}
             </div>
-
-            {/* Add Appointment Button */}
             <Link to="/appointments/add">
               <Button variant="primary" icon="add" className="hidden md:flex">
                 New Appointment
               </Button>
             </Link>
-
           </div>
         </div>
 
@@ -196,7 +197,6 @@ export default function AppointmentsPage() {
                   </span>
                   <div className="flex-grow h-px bg-outline-variant/30" />
                 </div>
-
                 <div className="flex flex-col gap-sm">
                   {apts.map((apt) => (
                     <Card
@@ -285,6 +285,8 @@ export default function AppointmentsPage() {
       >
         <span className="material-symbols-outlined text-[24px]">add</span>
       </Link>
+
+      <ToastContainer />
     </AppLayout>
   );
 }

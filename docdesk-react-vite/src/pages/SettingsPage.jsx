@@ -4,6 +4,7 @@ import Input from '../components/ui/Input';
 import Button from '../components/ui/Button';
 import Toggle from '../components/ui/Toggle';
 import Card from '../components/ui/Card';
+import { useToast } from '../hooks/useToast';
 
 export default function SettingsPage() {
   const [profile, setProfile] = useState({
@@ -16,10 +17,9 @@ export default function SettingsPage() {
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [profileSaved, setProfileSaved] = useState(false);
   const [apiError, setApiError] = useState('');
+  const { showToast, ToastContainer } = useToast();
 
-  // ── Fetch Profile ──
   useEffect(() => {
     async function fetchProfile() {
       try {
@@ -68,32 +68,27 @@ export default function SettingsPage() {
         },
         body: JSON.stringify(profile),
       });
-
       const data = await res.json();
-
       if (!res.ok) {
         setApiError(data.error || 'Failed to update profile');
+        showToast(data.error || 'Failed to update profile', 'error');
         return;
       }
-
-      // ✅ Update localStorage user
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       localStorage.setItem('user', JSON.stringify({
         ...user,
         name: profile.name,
         specialty: profile.specialty,
       }));
-
-      setProfileSaved(true);
-      setTimeout(() => setProfileSaved(false), 3000);
+      showToast('Profile updated successfully!', 'success');
     } catch (err) {
       setApiError('Server connection failed.');
+      showToast('Server connection failed.', 'error');
     } finally {
       setSaving(false);
     }
   }
 
-  // ── Get Initials ──
   const initials = profile.name
     ? profile.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()
     : 'DR';
@@ -137,15 +132,11 @@ export default function SettingsPage() {
         <Card className="overflow-hidden">
           <SectionHeader title="Doctor Profile" />
           <div className="p-lg flex flex-col md:flex-row gap-lg items-start">
-
-            {/* Avatar */}
             <div className="flex flex-col items-center gap-md flex-shrink-0 w-full md:w-auto">
               <div className="w-32 h-32 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed text-[40px] font-bold">
                 {initials}
               </div>
             </div>
-
-            {/* Fields */}
             <div className="flex flex-col w-full gap-gutter">
               <Input
                 label="Full Name"
@@ -177,9 +168,9 @@ export default function SettingsPage() {
                   variant="primary"
                   onClick={handleSave}
                   disabled={saving}
-                  icon={profileSaved ? 'check' : 'save'}
+                  icon={saving ? undefined : 'save'}
                 >
-                  {saving ? 'Saving…' : profileSaved ? 'Saved!' : 'Save Profile'}
+                  {saving ? 'Saving…' : 'Save Profile'}
                 </Button>
               </div>
             </div>
@@ -221,9 +212,8 @@ export default function SettingsPage() {
                 variant="secondary"
                 onClick={handleSave}
                 disabled={saving}
-                icon={profileSaved ? 'check' : undefined}
               >
-                {saving ? 'Saving…' : profileSaved ? 'Updated!' : 'Update Clinic Details'}
+                {saving ? 'Saving…' : 'Update Clinic Details'}
               </Button>
             </div>
           </div>
@@ -255,8 +245,6 @@ export default function SettingsPage() {
               <Button variant="secondary" size="sm">Update Password</Button>
             </div>
           </div>
-
-          {/* Notifications */}
           <div className="p-lg flex flex-col gap-md">
             <h3 className="text-body-lg font-semibold text-on-surface">Notifications</h3>
             <Toggle
@@ -295,6 +283,8 @@ export default function SettingsPage() {
         </Card>
 
       </div>
+
+      <ToastContainer />
     </AppLayout>
   );
 }

@@ -4,6 +4,7 @@ import AppLayout from '../components/layout/AppLayout';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
+import { useToast } from '../hooks/useToast';
 
 const STATUS_VARIANT = {
   Chronic: 'warning',
@@ -19,6 +20,7 @@ export default function PatientProfilePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const { showToast, ToastContainer } = useToast();
 
   useEffect(() => {
     fetchPatient();
@@ -61,14 +63,15 @@ export default function PatientProfilePage() {
 
       if (!res.ok) {
         const data = await res.json();
-        alert(data.error || 'Failed to delete patient');
+        showToast(data.error || 'Failed to delete patient', 'error');
         setDeleting(false);
         return;
       }
 
-      navigate('/patients');
+      showToast('Patient deleted successfully!', 'success');
+      setTimeout(() => navigate('/patients'), 1000);
     } catch (err) {
-      alert('Server connection failed.');
+      showToast('Server connection failed.', 'error');
       setDeleting(false);
     }
   }
@@ -140,9 +143,9 @@ export default function PatientProfilePage() {
             >
               {deleting ? 'Deleting…' : 'Delete'}
             </Button>
-           <Link to={`/patients/${id}/edit`}>
-  <Button variant="secondary" size="sm">Edit Profile</Button>
-</Link>
+            <Link to={`/patients/${id}/edit`}>
+              <Button variant="secondary" size="sm">Edit Profile</Button>
+            </Link>
             <Button variant="primary" size="sm">Start Consultation</Button>
           </div>
         </div>
@@ -297,6 +300,8 @@ export default function PatientProfilePage() {
           </div>
         </div>
       </div>
+
+      <ToastContainer />
     </AppLayout>
   );
 }
